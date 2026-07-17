@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Options — Jira Ticket Copier</title>
+    <style>
+      :root {
+        --blue: #1868db;
+        --blue-dark: #1558bc;
+        --bg: #ffffff;
+        --card: #f7f8f9;
+        --fg: #172b4d;
+        --muted: #626f86;
+        --border: #dfe1e6;
+        --btn-bg: #f7f8f9;
+        --btn-bg-hover: #ebecf0;
+        --ok: #216e4e;
+        --err: #c9372c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --blue: #4688ec;
+          --blue-dark: #669df1;
+          --bg: #1d2125;
+          --card: #22272b;
+          --fg: #c7d1db;
+          --muted: #96a0ab;
+          --border: #38414a;
+          --btn-bg: #282e33;
+          --btn-bg-hover: #2c333a;
+          --ok: #7ee2b8;
+          --err: #fd9891;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0 auto;
+        max-width: 760px;
+        padding: 28px 24px 60px;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+      }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      h2 { font-size: 15px; margin: 28px 0 10px; }
+      p.sub { color: var(--muted); margin: 0 0 8px; }
+      code {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 12px;
+      }
+      .vars { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+      .vars code { cursor: default; }
+      .format {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .format .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .format label { font-size: 12px; color: var(--muted); width: 70px; flex: none; }
+      input[type="text"], textarea {
+        width: 100%;
+        background: var(--bg);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 7px 9px;
+        font: inherit;
+      }
+      textarea { resize: vertical; min-height: 38px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+      .preview {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--bg);
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        padding: 6px 9px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin-top: 6px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--btn-bg);
+        color: var(--fg);
+        border-radius: 6px;
+        padding: 7px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover { background: var(--btn-bg-hover); }
+      button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+      button.primary:hover { background: var(--blue-dark); }
+      button.icon { padding: 4px 8px; font-size: 13px; }
+      button.danger { color: var(--err); }
+      .format .actions { display: flex; gap: 6px; justify-content: flex-end; }
+      .toolbar { display: flex; gap: 8px; align-items: center; margin: 14px 0 0; }
+      #saved { color: var(--ok); font-size: 13px; min-height: 18px; }
+      details { margin-top: 8px; }
+      summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+      .adv-field { margin-top: 10px; }
+      .adv-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+      .adv-field textarea { min-height: 90px; }
+      .err-msg { color: var(--err); font-size: 12px; min-height: 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>Jira Ticket Copier — Options</h1>
+    <p class="sub">
+      Personnalise les formats de copie. Chaque format est un gabarit texte où
+      les variables ci-dessous sont remplacées par les données du ticket.
+    </p>
+
+    <div class="vars" id="varList"></div>
+    <p class="sub" style="font-size: 12px">
+      Aperçu calculé sur un ticket d'exemple. <code>{branch}</code> et
+      <code>{commitType}</code> dépendent du type d'issue (voir Réglages avancés).
+    </p>
+
+    <div id="formats"></div>
+
+    <div class="toolbar">
+      <button type="button" id="add">+ Ajouter un format</button>
+      <button type="button" class="primary" id="save">Enregistrer</button>
+      <button type="button" id="reset" class="danger">Réinitialiser les défauts</button>
+      <span id="saved" role="status" aria-live="polite"></span>
+    </div>
+
+    <h2>Copie multi-tickets</h2>
+    <p class="sub" style="font-size: 12px">
+      Gabarit appliqué à chaque ligne dans les vues board / backlog.
+    </p>
+    <textarea id="multiTemplate" rows="2"></textarea>
+
+    <details>
+      <summary>Réglages avancés — correspondances type d'issue</summary>
+      <p class="sub" style="font-size: 12px; margin-top: 8px">
+        JSON <code>{ "sous-chaîne du type": "valeur", "default": "…" }</code>.
+        La sous-chaîne est cherchée (insensible à la casse) dans le type d'issue.
+      </p>
+      <div class="adv-field">
+        <label for="branchPrefixes">Préfixes de branche → <code>{branchPrefix}</code> / <code>{branch}</code></label>
+        <textarea id="branchPrefixes" spellcheck="false"></textarea>
+      </div>
+      <div class="adv-field">
+        <label for="commitTypes">Types de commit → <code>{commitType}</code></label>
+        <textarea id="commitTypes" spellcheck="false"></textarea>
+      </div>
+      <div class="adv-field">
+        <label for="historyLimit">Nombre de tickets gardés dans l'historique</label>
+        <input type="text" id="historyLimit" style="width: 80px" />
+      </div>
+      <div class="err-msg" id="advErr"></div>
+    </details>
+
+    <script src="extract-fn.js"></script>
+    <script src="settings.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
