@@ -81,20 +81,44 @@
   }
 
   function getButtonText(button) {
-    return [
+    const parts = [
       button.getAttribute("aria-label"),
       button.getAttribute("title"),
       button.getAttribute("data-testid"),
       button.textContent,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
+    ];
+    // Les vues modernes de Jira posent souvent le data-testid parlant sur un
+    // conteneur parent (le <button> lui-même ne porte qu'une icône). On remonte
+    // donc quelques niveaux pour récupérer ces identifiants.
+    let node = button.parentElement;
+    for (let depth = 0; depth < 3 && node; depth++) {
+      const testid = node.getAttribute && node.getAttribute("data-testid");
+      if (testid) parts.push(testid);
+      node = node.parentElement;
+    }
+    return parts.filter(Boolean).join(" ").toLowerCase();
   }
 
-  function visibleTopButtons() {
+  // Conteneur de l'issue courante : panneau latéral « Jira work item » ouvert
+  // depuis le board/backlog, ou vue détaillée classique. On s'y restreint pour
+  // ne pas attraper les boutons du board en arrière-plan.
+  function issueScope() {
+    const selectors = [
+      '[data-testid*="issue.views.issue-details"]',
+      '[data-testid*="issue.views.issue-base"]',
+      '[data-testid*="issue-view"]',
+      '[role="dialog"]',
+    ];
+    for (const s of selectors) {
+      const el = document.querySelector(s);
+      if (el) return el;
+    }
+    return document;
+  }
+
+  function visibleTopButtons(scope) {
     return Array.from(
-      document.querySelectorAll("button, a[role='button']")
+      (scope || issueScope()).querySelectorAll("button, a[role='button']")
     ).filter((button) => {
       const rect = button.getBoundingClientRect();
       return rect.width >= 24 && rect.height >= 24 && rect.top >= 0 && rect.top < 260;
@@ -117,36 +141,79 @@
     );
   }
 
-  // Bouton d'ancrage : « Copy link » en priorité, puis « Watch » en repli.
-  function findAnchorButton() {
-    return findCopyLinkButton() || findWatchButton();
+  function findShareButton() {
+    return visibleTopButtons().find((button) =>
+      /share|partager|delen|teilen/.test(getButtonText(button))
+    );
   }
 
-  function findIssueActionContainer() {
-    const anchorButton = findAnchorButton();
-    if (anchorButton?.parentElement) return anchorButton.parentElement;
-
-    const issueShell = document.querySelector(
-      [
-        '[data-testid*="issue.views.issue-details"]',
-        '[data-testid*="issue.views.issue-base"]',
-        '[data-testid*="issue-view"]',
-        '[role="dialog"]',
-        "main",
-      ].join(",")
+  function findMoreActionsButton() {
+    return visibleTopButtons().find((button) =>
+      /more actions|more-actions|meatball|plus d'actions|meer acties|weitere aktionen/.test(
+        getButtonText(button)
+      )
     );
-    const buttons = Array.from(
-      (issueShell || document).querySelectorAll("button, a[role='button']")
-    ).filter((button) => button.getBoundingClientRect().top < 240);
+  }
 
-    let best = null;
-    for (const button of buttons) {
-      const rect = button.getBoundingClientRect();
-      if (rect.width < 24 || rect.height < 24) continue;
-      if (!best || rect.right > best.getBoundingClientRect().right) best = button;
+  // Bouton d'ancrage de repli : « Copy link » en priorité, puis « Watch » /
+  // « Share » / « … » (vues non standard sans les data-testid attendus).
+  function findAnchorButton() {
+    return (
+      findCopyLinkButton() ||
+      findWatchButton() ||
+      findShareButton() ||
+      findMoreActionsButton()
+    );
+  }
+
+  // Repère la rangée d'actions de l'en-tête d'issue (œil / partage / …), commune
+  // à la vue détaillée et au panneau latéral, via les data-testid stables de Jira.
+  // Renvoie { row, ref } : `row` = conteneur flex, `ref` = élément après lequel
+  // insérer le bouton (le wrapper de l'œil), ou null si non rendu.
+  function findHeaderActionsRow() {
+    const watch = document.querySelector(
+      '[data-testid="issue.watchers.action-button.root"]'
+    );
+    const meatball = document.querySelector(
+      '[data-testid="issue-meatball-menu.ui.dropdown-trigger.button"]'
+    );
+
+    if (watch && meatball) {
+      const watchAncestors = [];
+      for (let node = watch; node; node = node.parentElement) {
+        watchAncestors.push(node);
+      }
+      // Plus proche ancêtre commun = la rangée d'actions.
+      let row = null;
+      for (let node = meatball; node; node = node.parentElement) {
+        if (watchAncestors.includes(node)) {
+          row = node;
+          break;
+        }
+      }
+      if (row) {
+        // Enfant direct de la rangée contenant l'œil : on insère juste après.
+        let ref = watch;
+        while (ref && ref.parentElement !== row) ref = ref.parentElement;
+        return { row, ref };
+      }
     }
 
-    return best?.parentElement || null;
+    const anchor = watch || meatball;
+    if (anchor?.parentElement) return { row: anchor.parentElement, ref: anchor };
+    return null;
+  }
+
+  // Cible d'insertion : rangée d'actions officielle, sinon repli heuristique.
+  function findActionTarget() {
+    const header = findHeaderActionsRow();
+    if (header) return header;
+
+    const anchorButton = findAnchorButton();
+    if (anchorButton?.parentElement) {
+      return { row: anchorButton.parentElement, ref: anchorButton };
+    }
+    return null;
   }
 
   function createActionButton(data) {
@@ -159,16 +226,17 @@
 
     Object.assign(button.style, {
       alignItems: "center",
-      background: paneOpen ? "#e9f2ff" : "#ffffff",
-      border: "1px solid #dfe1e6",
-      borderRadius: "3px",
+      background: paneOpen ? "#e9f2ff" : "transparent",
+      border: "none",
+      borderRadius: "4px",
       color: "#172b4d",
       cursor: "pointer",
       display: "inline-flex",
+      flex: "0 0 auto",
       font: "500 14px/20px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       height: "32px",
       justifyContent: "center",
-      marginLeft: "4px",
+      marginLeft: "2px",
       padding: "0",
       verticalAlign: "middle",
       width: "32px",
@@ -185,7 +253,7 @@
       button.style.background = paneOpen ? "#e9f2ff" : "#f4f5f7";
     });
     button.addEventListener("mouseleave", () => {
-      button.style.background = paneOpen ? "#e9f2ff" : "#ffffff";
+      button.style.background = paneOpen ? "#e9f2ff" : "transparent";
     });
     button.addEventListener("click", (event) => {
       event.preventDefault();
@@ -203,19 +271,28 @@
     if (existing) {
       existing.title = `Ouvrir les copies Jira (${data.key})`;
       existing.setAttribute("aria-label", `Ouvrir les copies Jira pour ${data.key}`);
-      existing.style.background = paneOpen ? "#e9f2ff" : "#ffffff";
+      existing.style.background = paneOpen ? "#e9f2ff" : "transparent";
+      // La rangée d'actions peut avoir été re-rendue par Jira : on réancre au
+      // besoin pour ne pas laisser le bouton orphelin ailleurs dans la page.
+      const target = findActionTarget();
+      if (target && existing.parentElement !== target.row) {
+        if (target.ref && target.ref.parentElement === target.row) {
+          target.ref.insertAdjacentElement("afterend", existing);
+        } else {
+          target.row.appendChild(existing);
+        }
+      }
       return true;
     }
 
-    const container = findIssueActionContainer();
-    if (!container) return false;
+    const target = findActionTarget();
+    if (!target) return false;
 
     const button = createActionButton(data);
-    const anchorButton = findAnchorButton();
-    if (anchorButton?.parentElement === container) {
-      anchorButton.insertAdjacentElement("afterend", button);
+    if (target.ref && target.ref.parentElement === target.row) {
+      target.ref.insertAdjacentElement("afterend", button);
     } else {
-      container.appendChild(button);
+      target.row.appendChild(button);
     }
 
     return true;
@@ -814,7 +891,9 @@
     options.textContent = "⚙︎ Personnaliser les formats";
     options.addEventListener("click", (event) => {
       event.preventDefault();
-      chrome.runtime.openOptionsPage();
+      // `chrome.runtime.openOptionsPage()` n'existe pas dans un content script :
+      // on délègue au service worker via un message.
+      chrome.runtime.sendMessage({ type: "open-options" });
     });
     foot.appendChild(options);
     body.appendChild(foot);

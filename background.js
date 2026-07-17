@@ -84,3 +84,12 @@ chrome.commands.onCommand.addListener((command, tab) => {
   const formatId = COMMAND_TO_FORMAT[command];
   if (formatId) runCopy(tab?.id, formatId);
 });
+
+// ---- Messages depuis les content scripts ---------------------------------
+// Le panneau latéral (page-buttons.js) ne peut pas appeler openOptionsPage()
+// directement : il passe par le service worker.
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg && msg.type === "open-options") {
+    chrome.runtime.openOptionsPage();
+  }
+});
