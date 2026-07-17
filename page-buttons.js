@@ -92,23 +92,39 @@
       .toLowerCase();
   }
 
-  function findWatchButton() {
-    const buttons = Array.from(document.querySelectorAll("button, a[role='button']"));
-    const visibleTopButtons = buttons.filter((button) => {
+  function visibleTopButtons() {
+    return Array.from(
+      document.querySelectorAll("button, a[role='button']")
+    ).filter((button) => {
       const rect = button.getBoundingClientRect();
       return rect.width >= 24 && rect.height >= 24 && rect.top >= 0 && rect.top < 260;
     });
+  }
 
-    return visibleTopButtons.find((button) =>
+  function findCopyLinkButton() {
+    return visibleTopButtons().find((button) =>
+      /copy link|copier le lien|copy url|lien de copie|kopieer link/.test(
+        getButtonText(button)
+      )
+    );
+  }
+
+  function findWatchButton() {
+    return visibleTopButtons().find((button) =>
       /watch|watcher|observer|observateur|suivre|surveill|eye/.test(
         getButtonText(button)
       )
     );
   }
 
+  // Bouton d'ancrage : « Copy link » en priorité, puis « Watch » en repli.
+  function findAnchorButton() {
+    return findCopyLinkButton() || findWatchButton();
+  }
+
   function findIssueActionContainer() {
-    const watchButton = findWatchButton();
-    if (watchButton?.parentElement) return watchButton.parentElement;
+    const anchorButton = findAnchorButton();
+    if (anchorButton?.parentElement) return anchorButton.parentElement;
 
     const issueShell = document.querySelector(
       [
@@ -195,11 +211,11 @@
     if (!container) return false;
 
     const button = createActionButton(data);
-    const watchButton = findWatchButton();
-    if (watchButton?.parentElement === container) {
-      watchButton.insertAdjacentElement("afterend", button);
+    const anchorButton = findAnchorButton();
+    if (anchorButton?.parentElement === container) {
+      anchorButton.insertAdjacentElement("afterend", button);
     } else {
-      container.insertBefore(button, container.firstChild);
+      container.appendChild(button);
     }
 
     return true;
@@ -227,29 +243,40 @@
     status.classList.toggle("error", Boolean(isError));
   }
 
-  async function copyFormat(format, data, button, root) {
-    const text = window.__jiraTicketHelper.renderTemplate(format.template, data, opts);
+  // Copie `text`, affiche le statut et fait clignoter le bouton en « ✓ Copié ».
+  // Renvoie true si la copie a réussi.
+  async function copyAndFlash(text, button, root) {
     const ok = await window.__jiraTicketHelper.copyText(text);
     setStatus(root, ok ? "Copié : " + text : "Échec de la copie", !ok);
 
-    if (!ok) return;
+    if (!ok) return false;
 
     button.classList.add("copied");
     const label = button.querySelector(".label");
-    const oldText = label.textContent;
-    label.textContent = "✓ Copié";
+    const oldText = label ? label.textContent : null;
+    if (label) label.textContent = "✓ Copié";
+
+    setTimeout(() => {
+      if (!button.isConnected) return;
+      button.classList.remove("copied");
+      if (label) label.textContent = oldText;
+      setStatus(root, "", false);
+    }, 1200);
+
+    return true;
+  }
+
+  async function copyFormat(format, data, button, root) {
+    const text = window.__jiraTicketHelper.renderTemplate(format.template, data, opts);
+    const ok = await copyAndFlash(text, button, root);
+    if (!ok) return;
 
     await window.JiraSettings.addHistory(
       { key: data.key, title: data.title, url: data.url },
       settings.historyLimit
     );
-
-    setTimeout(() => {
-      if (!button.isConnected) return;
-      button.classList.remove("copied");
-      label.textContent = oldText;
-      setStatus(root, "", false);
-    }, 1200);
+    // Rafraîchit la section « Récents » pour refléter la nouvelle entrée.
+    renderHistorySection(root);
   }
 
   function buildCopyButton(format, data, isPrimary, root) {
@@ -316,6 +343,119 @@
     if (meta.childNodes.length) head.appendChild(meta);
 
     return head;
+  }
+
+  // Section « copie multi-tickets » (vues liste / board / backlog).
+  // Rendue au mieux : sans vue liste détectée, la section reste vide.
+  function renderMultiSection(root) {
+    const container = root.querySelector("[data-multi]");
+    if (!container) return;
+    container.innerHTML = "";
+
+    let tickets = null;
+    try {
+      tickets = window.__jiraTicketHelper.extractMultiple();
+    } catch (_) {
+      return;
+    }
+    if (!tickets || tickets.length < 2) return;
+
+    const heading = document.createElement("h1");
+    heading.textContent = `${tickets.length} tickets sur cette page`;
+    container.appendChild(heading);
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy";
+
+    const icon = document.createElement("span");
+    icon.className = "ico";
+    icon.textContent = "☑";
+
+    const body = document.createElement("span");
+    body.className = "body";
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = "Copier la liste";
+    const sample = document.createElement("span");
+    sample.className = "preview";
+    sample.textContent = "Checklist Markdown";
+    body.append(label, sample);
+
+    const hint = document.createElement("span");
+    hint.className = "copy-hint";
+    hint.textContent = "Copier";
+
+    button.append(icon, body, hint);
+    button.addEventListener("click", () => {
+      const text = window.__jiraTicketHelper.renderMultiple(
+        settings.multiTemplate,
+        tickets,
+        opts
+      );
+      copyAndFlash(text, button, root);
+    });
+    container.appendChild(button);
+  }
+
+  // Section « Récents » — historique des tickets copiés (stockage local).
+  async function renderHistorySection(root) {
+    const container = root.querySelector("[data-history]");
+    if (!container) return;
+
+    const list = await window.JiraSettings.getHistory();
+    // Le panneau a pu être fermé/recréé entre-temps : on revérifie.
+    if (!container.isConnected) return;
+    container.innerHTML = "";
+    if (!list.length) return;
+
+    const head = document.createElement("div");
+    head.className = "hist-head";
+    const heading = document.createElement("h1");
+    heading.textContent = "Récents";
+    head.appendChild(heading);
+    const clear = document.createElement("a");
+    clear.href = "#";
+    clear.textContent = "Effacer";
+    clear.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await window.JiraSettings.clearHistory();
+      container.innerHTML = "";
+    });
+    head.appendChild(clear);
+    container.appendChild(head);
+
+    for (const entry of list) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "copy hist-item";
+      item.title = `${entry.key} ${entry.title || ""}`.trim();
+
+      const icon = document.createElement("span");
+      icon.className = "ico";
+      icon.textContent = "🕘";
+
+      const body = document.createElement("span");
+      body.className = "body";
+      const key = document.createElement("span");
+      key.className = "hist-key";
+      key.textContent = entry.key;
+      const title = document.createElement("span");
+      title.className = "hist-title";
+      title.textContent = entry.title || "";
+      body.append(key, title);
+
+      const hint = document.createElement("span");
+      hint.className = "copy-hint";
+      hint.textContent = "Copier";
+
+      item.append(icon, body, hint);
+      item.addEventListener("click", () => {
+        const text = entry.title ? `${entry.key} ${entry.title}` : entry.key;
+        copyAndFlash(text, item, root);
+      });
+      container.appendChild(item);
+    }
   }
 
   function renderPane(data) {
@@ -583,6 +723,44 @@
         color: var(--blue);
         text-decoration: underline;
       }
+      .multi:not(:empty),
+      .history:not(:empty) {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+      .hist-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .hist-head a {
+        color: var(--faint);
+        font-size: 12px;
+        text-decoration: none;
+      }
+      .hist-head a:hover {
+        color: var(--blue);
+        text-decoration: underline;
+      }
+      .hist-item .body {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .hist-key {
+        font-weight: 700;
+        color: var(--blue);
+        font-family: var(--mono);
+        flex: 0 0 auto;
+      }
+      .hist-title {
+        color: var(--muted);
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       @media (max-width: 520px) {
         .pane {
           width: calc(100vw - 16px);
@@ -629,13 +807,6 @@
     });
     body.appendChild(buttons);
 
-    const status = document.createElement("div");
-    status.className = "status";
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
-    status.dataset.status = "";
-    body.appendChild(status);
-
     const foot = document.createElement("div");
     foot.className = "foot";
     const options = document.createElement("a");
@@ -648,8 +819,29 @@
     foot.appendChild(options);
     body.appendChild(foot);
 
+    const status = document.createElement("div");
+    status.className = "status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.dataset.status = "";
+    body.appendChild(status);
+
+    const multi = document.createElement("div");
+    multi.className = "multi";
+    multi.dataset.multi = "";
+    body.appendChild(multi);
+
+    const history = document.createElement("div");
+    history.className = "history";
+    history.dataset.history = "";
+    body.appendChild(history);
+
     pane.append(bar, body);
     root.append(style, pane);
+
+    // Sections optionnelles (multi-tickets + historique), comme dans le popup.
+    renderMultiSection(root);
+    renderHistorySection(root);
   }
 
   async function refresh() {

@@ -44,11 +44,13 @@ correspondances éditables (ex. `bug → fix` / `bugfix/`).
 - **Copie dans la page** — un bouton s'ajoute aux actions du ticket Jira et ouvre
   un panneau latéral à droite avec la même interface et les mêmes formats
   personnalisables que la popup.
-- **Historique** — les derniers tickets copiés apparaissent dans la popup, recopie en un clic.
+- **Historique** — les derniers tickets copiés apparaissent dans la popup comme
+  dans le panneau latéral, recopie en un clic.
 - **Copie multi-tickets** — sur les vues board / backlog / liste, un bouton copie
-  tous les tickets détectés sous forme de checklist Markdown (gabarit configurable).
+  tous les tickets détectés sous forme de checklist Markdown (gabarit configurable),
+  disponible dans la popup comme dans le panneau latéral.
 - **Champs additionnels** — type, statut, assigné et priorité sont extraits
-  (best-effort) et affichés en puces dans la popup.
+  (best-effort) et affichés en puces.
 
 ### Extraction
 
