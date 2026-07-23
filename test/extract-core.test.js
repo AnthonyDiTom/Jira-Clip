@@ -59,6 +59,24 @@ test("extract: variante — clé via ?selectedIssue, champs en texte", () => {
   assert.equal(data.url, "https://acme.atlassian.net/browse/DEMO-42");
 });
 
+// ---- Statut : ne pas confondre avec les issues liées / enfants ----------
+// Régression : la page d'un ticket contient plusieurs « lozenges » de statut
+// (issues liées, enfants, cartes de liste) en plus du statut du ticket
+// principal. Un sélecteur trop large lisait le premier lozenge en ordre DOM
+// (« New ») au lieu du statut réel (« Implementation »).
+test("findStatus: ignore les lozenges d'issues liées, lit le statut principal", () => {
+  const { doc } = fromHtml(
+    `<div data-testid="issue.fields.status.common.ui.status-lozenge.2">New</div>
+     <div data-testid="issue-line-card.ui.status.status-field-container"><span>New</span></div>
+     <div data-testid="issue.views.issue-base.foundation.status.status-field-wrapper">
+       <button type="button" data-testid="issue-field-status.ui.status-view.status-button.status-button">
+         <span>Implementation</span>
+       </button>
+     </div>`
+  );
+  assert.equal(X.findStatus(doc), "Implementation");
+});
+
 test("findKey: URL /browse prioritaire, puis query, puis titre, puis DOM", () => {
   // 1) URL /browse
   let { doc, loc } = fromHtml("", "https://acme.atlassian.net/browse/AB-1");

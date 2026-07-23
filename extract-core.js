@@ -149,11 +149,19 @@
   }
 
   function findStatus(doc) {
+    // On vise *uniquement* le statut du ticket principal. Des sélecteurs trop
+    // larges (p. ex. [data-testid*="status-field"] ou *="issue.fields.status")
+    // capturent aussi les « lozenges » de statut des issues liées / enfants /
+    // cartes de liste présentes sur la page (status-lozenge, issue-line-card…),
+    // dont la première en ordre DOM peut être n'importe quel statut (« New »).
     return firstFieldValue(doc, [
-      '[data-testid*="status-field"] button span',
-      '[data-testid*="status-field"] span',
-      '[data-testid*="status.status-field"] span',
-      '[data-testid*="issue.fields.status"] span',
+      // Bouton de statut du ticket principal (vue moderne Jira Cloud).
+      '[data-testid*="status-view.status-button.status-button"]',
+      // Conteneur « fondation » du statut de l'issue principale.
+      '[data-testid*="foundation.status"] button span',
+      '[data-testid*="foundation.status.status-field-wrapper"] span',
+      // Variante : champ statut principal (exclut les lozenges status-lozenge).
+      '[data-testid*="issue.fields.status.common.ui.status-field"] span',
     ]);
   }
 
