@@ -168,3 +168,7 @@ npm test        # ou : node --test
 - `contextMenus` : entrée de menu au clic droit.
 - `storage` : mémoriser vos formats personnalisés (synchronisés via le compte) et
   l'historique / le dernier format utilisé (stockage local).
+
+## Licence
+
+Ce projet est distribué sous licence [MIT](LICENSE).
