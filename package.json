@@ -3,7 +3,7 @@
   "version": "1.7.0",
   "private": true,
   "license": "MIT",
-  "description": "Extension Chrome : copie le numéro et le titre d'un ticket Jira dans des formats personnalisables.",
+  "description": "Chrome extension: copies the key and title of a Jira ticket in customizable formats.",
   "scripts": {
     "test": "node --test"
   },

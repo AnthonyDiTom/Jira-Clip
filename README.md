@@ -1,174 +1,188 @@
 # Jira Ticket Copier
 
-Extension Chrome (Manifest V3) qui récupère le **numéro** et le **titre** d'un ticket Jira
-et les copie dans le presse-papier, dans des formats **personnalisables**.
+Chrome extension (Manifest V3) that grabs the **key** and **title** of a Jira ticket
+and copies them to the clipboard, in **customizable** formats.
 
-Exemple sur un ticket :
+Example for a ticket:
 `DEMO-1234 Feature demo - Improve ticket copy examples`
 
-## Fonctionnalités
+> Works on any Jira instance — Chromium-based browsers (Chrome, Edge, Brave, …).
 
-Quatre façons de déclencher la copie :
+## Features
 
-| Déclencheur                  | Comportement                                                   |
-| ---------------------------- | ------------------------------------------------------------- |
-| **Bouton dans Jira**         | Bouton près des actions du ticket, panneau latéral avec l'interface de la popup (`Cmd/Ctrl+Shift+Y` pour l'ouvrir/fermer, `Échap` pour fermer) |
-| **Clic sur l'icône**         | Popup : ticket détecté, boutons de copie, historique, multi (touches `1`–`9` = copie du format correspondant, `Entrée` = dernier format utilisé) |
-| **Raccourci clavier**        | `Cmd/Ctrl+Shift+U` — « Numéro + titre » (+ raccourcis branche / markdown) |
-| **Clic droit → Ticket Jira** | Sous-menu avec tous les formats                               |
+Four ways to trigger a copy:
 
-### Formats de copie (personnalisables)
+| Trigger                       | Behavior                                                      |
+| ----------------------------- | ------------------------------------------------------------ |
+| **Button in Jira**            | Button near the ticket actions, side panel with the popup interface (`Cmd/Ctrl+Shift+Y` to open/close, `Esc` to close) |
+| **Click the icon**            | Popup: detected ticket, copy buttons, history, multi (keys `1`–`9` = copy the matching format, `Enter` = last used format) |
+| **Keyboard shortcut**         | `Cmd/Ctrl+Shift+U` — "Key + title" (plus branch / markdown shortcuts) |
+| **Right-click → Jira Ticket** | Submenu with every format                                    |
 
-Formats fournis par défaut :
+### Copy formats (customizable)
 
-- **Numéro + titre** — `DEMO-1234 Feature demo - …`
-- **Nom de branche git** — `feature/DEMO-1234-feature-demo-…`
-  (préfixe choisi selon le **type d'issue**, clé conservée, titre en kebab-case)
-- **Commande git switch** — `git switch -c feature/DEMO-1234-…` (prêt à coller)
-- **Message de commit** — `feat(DEMO-1234): Feature demo - …` (type Conventional Commits déduit du type d'issue)
-- **Lien Markdown** — `[DEMO-1234](https://…/browse/DEMO-1234) Feature demo - …`
-- **Numéro seul** — `DEMO-1234`
-- **Description de PR** — squelette Markdown pré-rempli (lien, contexte, changements, tests)
+Formats provided by default:
 
-Chaque format est un **gabarit** modifiable dans la page d'options, avec ces variables :
+- **Key + title** — `DEMO-1234 Feature demo - …`
+- **Git branch name** — `feature/DEMO-1234-feature-demo-…`
+  (prefix chosen from the **issue type**, key preserved, title in kebab-case)
+- **Git switch command** — `git switch -c feature/DEMO-1234-…` (ready to paste)
+- **Commit message** — `feat(DEMO-1234): Feature demo - …` (Conventional Commits type inferred from the issue type)
+- **Markdown link** — `[DEMO-1234](https://…/browse/DEMO-1234) Feature demo - …`
+- **Key only** — `DEMO-1234`
+- **PR description** — pre-filled Markdown skeleton (link, context, changes, tests)
 
-`{key}` `{title}` `{titleRaw}` (titre non nettoyé) `{titleMd}` (échappé Markdown)
+Each format is a **template** you can edit on the options page, with these variables:
+
+`{key}` `{title}` `{titleRaw}` (uncleaned title) `{titleMd}` (Markdown-escaped)
 `{titleLower}` `{slug}` `{url}`
 `{type}` `{status}` `{assignee}` `{priority}` `{project}` `{parentKey}`
-`{commitType}` `{branchPrefix}` `{branch}` (= préfixe + clé + slug) `{date}` (date du jour, AAAA-MM-JJ)
+`{commitType}` `{branchPrefix}` `{branch}` (= prefix + key + slug) `{date}` (today's date, YYYY-MM-DD)
 
-Ajoutez `:N` à une variable pour la tronquer, ex. `{slug:40}` ou `{title:60}`.
+Append `:N` to a variable to truncate it, e.g. `{slug:40}` or `{title:60}`.
 
-`{project}` est déduit de la clé (`DEMO-1234` → `DEMO`). `{parentKey}` (ticket
-parent / epic) est rempli au mieux via l'API REST de Jira.
+`{project}` is derived from the key (`DEMO-1234` → `DEMO`). `{parentKey}` (parent
+ticket / epic) is filled best-effort through Jira's REST API.
 
-Dans la page d'options, cliquez sur une variable pour l'insérer directement
-dans le gabarit sélectionné.
+On the options page, click a variable to insert it directly into the selected
+template.
 
-Chaque format affiche un **aperçu en direct** calculé sur un ticket d'exemple :
-le **texte copié** (brut) et, pour les gabarits Markdown, le **rendu** tel qu'il
-sera collé dans un éditeur riche (Slack, Confluence…).
+Each format shows a **live preview** computed on a sample ticket: the **copied
+text** (raw) and, for Markdown templates, the **rendered output** as it will be
+pasted into a rich editor (Slack, Confluence…).
 
-`{commitType}` et `{branchPrefix}` sont déduits du type d'issue via des
-correspondances éditables (ex. `bug → fix` / `bugfix/`).
+`{commitType}` and `{branchPrefix}` are derived from the issue type through
+editable mappings (e.g. `bug → fix` / `bugfix/`).
 
-#### Nettoyage du titre
+#### Title cleanup
 
-Dans les **réglages avancés**, le titre peut être nettoyé avant de générer les
-formats (slug / branche / commit) :
+In the **advanced settings**, the title can be cleaned before the formats
+(slug / branch / commit) are generated:
 
-- Case **« Ignorer les tags entre crochets »** : retire automatiquement les
-  `[FRONT]`, `[BE]`… sans écrire de motif.
-- Liste de **motifs** supplémentaires (expressions régulières, un par ligne),
-  ex. `/^\s*wip:?/i` retire un préfixe « WIP: ».
+- **"Ignore bracketed tags"** checkbox: automatically strips `[FRONT]`, `[BE]`…
+  without writing a pattern.
+- Extra list of **patterns** (regular expressions, one per line),
+  e.g. `/^\s*wip:?/i` strips a "WIP:" prefix.
 
-La casse est ignorée par défaut ; la forme `/motif/flags` permet de préciser
-les drapeaux. Le nettoyage s'applique à `{title}`, `{slug}`, `{branch}`… ;
-`{titleRaw}` conserve toujours le titre d'origine.
+Case is ignored by default; the `/pattern/flags` form lets you set the flags.
+Cleanup applies to `{title}`, `{slug}`, `{branch}`… ; `{titleRaw}` always keeps
+the original title.
 
-### Auto-assignation
+### Auto-assign
 
-Assignez un ticket en un clic à des personnes que vous choisissez (**5 maximum**),
-en plus d'un bouton **« M'assigner »**.
+Assign a ticket in one click to people you choose (**5 maximum**), on top of a
+**"Assign to me"** button.
 
-- Chaque personne configurée devient un **bouton d'assignation rapide**, à la fois
-  dans le **panneau latéral** (section « Assigner à ») et dans la **barre d'actions**
-  du ticket (petits avatars à côté du bouton ⧉).
-- **Choix des personnes** : recherche par nom / e-mail, soit depuis la zone
-  « Gérer les personnes » du panneau (directement sur une page Jira), soit depuis
-  la page d'**options**. Depuis les options, gardez un onglet Jira ouvert : la
-  recherche réutilise votre session Jira via cet onglet.
-- L'assignation passe par l'**API REST de Jira** (`PUT …/assignee`) en réutilisant
-  la session de l'onglet — aucune permission supplémentaire, aucun token à saisir.
+- Each configured person becomes a **quick-assign button**, both in the **side
+  panel** ("Assign to" section) and in the ticket's **action bar** (small avatars
+  next to the ⧉ button).
+- **Choosing people**: search by name / email, either from the "Manage people"
+  area of the panel (directly on a Jira page), or from the **options** page. From
+  the options, keep a Jira tab open: the search reuses your Jira session through
+  that tab.
+- Assignment goes through Jira's **REST API** (`PUT …/assignee`) reusing the tab's
+  session — no extra permission, no token to enter.
 
-### Autres fonctionnalités
+### Other features
 
-- **Copie dans la page** — un bouton s'ajoute aux actions du ticket Jira et ouvre
-  un panneau latéral à droite avec la même interface et les mêmes formats
-  personnalisables que la popup.
-- **Historique** — les derniers tickets copiés apparaissent dans la popup comme
-  dans le panneau latéral, recopie en un clic (au format préféré).
-- **Copie multi-tickets** — sur les vues board / backlog / liste, un bouton copie
-  les tickets **cochés** sous forme de checklist Markdown (gabarit configurable),
-  avec « tout cocher / décocher », dans la popup comme dans le panneau latéral.
-- **Copie au format riche** — les formats Markdown (lien, description de PR,
-  checklist) sont aussi copiés en HTML : le lien est cliquable quand on le colle
-  dans un éditeur riche (Confluence, Docs, Slack…).
-- **Dernier format mémorisé** — le dernier format copié est mis en avant (badge
-  « dernier ») et déclenchable par `Entrée`.
-- **Saisie manuelle** — si aucun ticket n'est détecté, un champ permet de saisir
-  une clé (ex. `DEMO-1234`) pour construire les copies.
-- **Champs additionnels** — type, statut, assigné et priorité sont extraits
-  (best-effort) et affichés en puces colorées.
-- **Instances supplémentaires** — le bouton de page apparaît automatiquement sur
-  `*.atlassian.net` ; pour une instance auto-hébergée, ajoutez son adresse dans
-  les options (le navigateur demande l'autorisation d'accès à ce site).
-- **Import / Export** — sauvegarde et restauration des réglages en JSON.
-- **Langue** — interface popup / panneau en français ou anglais (auto par défaut).
+- **In-page copy** — a button is added to the Jira ticket actions and opens a side
+  panel on the right with the same interface and the same customizable formats as
+  the popup.
+- **History** — the last copied tickets appear in the popup as well as the side
+  panel, one-click re-copy (in your preferred format).
+- **Multi-ticket copy** — on board / backlog / list views, a button copies the
+  **checked** tickets as a Markdown checklist (configurable template), with
+  "check/uncheck all", in the popup as well as the side panel.
+- **Rich-format copy** — Markdown formats (link, PR description, checklist) are
+  also copied as HTML: the link is clickable when pasted into a rich editor
+  (Confluence, Docs, Slack…).
+- **Last format remembered** — the last copied format is highlighted (a "last"
+  badge) and can be triggered with `Enter`.
+- **Manual entry** — if no ticket is detected, a field lets you type a key
+  (e.g. `DEMO-1234`) to build the copies.
+- **Additional fields** — type, status, assignee and priority are extracted
+  (best-effort) and shown as colored chips.
+- **Extra instances** — the page button appears automatically on
+  `*.atlassian.net`; for a self-hosted instance, add its address in the options
+  (the browser will ask for permission to access that site).
+- **Import / Export** — save and restore your settings as JSON.
+- **Language** — popup / panel interface in French or English (auto by default).
 
 ### Extraction
 
-L'extraction fonctionne sur n'importe quelle instance Jira (aucune URL à configurer) :
-elle lit d'abord l'URL (`/browse/KEY`, `?selectedIssue=KEY`), puis le titre de l'onglet,
-puis le DOM (fil d'Ariane / `h1` / testids Jira Cloud), y compris la vue « Spaces ».
-En dernier recours, les champs manquants (titre, type, statut, parent…) sont
-complétés via l'**API REST** de Jira, en réutilisant la session de l'onglet.
+Extraction works on any Jira instance (no URL to configure): it reads the URL
+first (`/browse/KEY`, `?selectedIssue=KEY`), then the tab title, then the DOM
+(breadcrumb / `h1` / Jira Cloud testids), including the "Spaces" view. As a last
+resort, missing fields (title, type, status, parent…) are completed through
+Jira's **REST API**, reusing the tab's session.
 
-La popup suit le **thème clair/sombre** du système et respecte `prefers-reduced-motion`.
+The popup follows the system **light/dark theme** and respects
+`prefers-reduced-motion`.
 
-## Installation (mode développeur)
+## Installation (developer mode)
 
-1. Ouvrez `chrome://extensions`
-2. Activez le **Mode développeur** (en haut à droite)
-3. Cliquez sur **Charger l'extension non empaquetée**
-4. Sélectionnez le dossier de l'extension (racine du dépôt)
+1. Open `chrome://extensions`
+2. Enable **Developer mode** (top right)
+3. Click **Load unpacked**
+4. Select the extension folder (repository root)
 
-- Personnaliser les formats : clic droit sur l'icône → **Options**, ou le lien « ⚙︎ Personnaliser les formats » dans la popup.
-- Changer les raccourcis clavier : `chrome://extensions/shortcuts`.
+- Customize the formats: right-click the icon → **Options**, or the
+  "⚙︎ Customize formats" link in the popup.
+- Change the keyboard shortcuts: `chrome://extensions/shortcuts`.
+
+### Keyboard shortcuts
+
+| Command                | Default shortcut   | Action                                |
+| ---------------------- | ------------------ | ------------------------------------- |
+| Toggle pane            | `Cmd/Ctrl+Shift+Y` | Open / close the Jira copy side panel |
+| Copy "Key + title"     | `Cmd/Ctrl+Shift+U` | Copy the ticket key and title         |
+| Copy git branch name   | *(unassigned)*     | Copy the git branch name              |
+| Copy Markdown link     | *(unassigned)*     | Copy the Markdown link                |
+
+The branch and Markdown commands ship without a default binding — assign one in
+`chrome://extensions/shortcuts` if you use them.
 
 ## Structure
 
 ```
-manifest.json      Déclaration de l'extension (permissions, action, commandes, options)
-background.js      Service worker : menu contextuel + raccourcis + content scripts dynamiques
-template-engine.js Logique pure : moteur de gabarits + transformations + Markdown→HTML (testable)
-extract-core.js    Logique pure de parsing du DOM Jira (clé, titre, champs) — sans globales (testable)
-i18n.js            Traductions fr/en + t()
-extract-fn.js      Pont vers extract-core + API REST + copie + toast (injecté dans la page)
-page-buttons.js    Bouton de page + panneau latéral dans les pages Jira détectées
-settings.js        Réglages partagés + accès au stockage (popup / options / worker)
-popup.html/.js     Popup au clic sur l'icône (formats, historique, multi)
-options.html/.js   Page d'options : formats, instances, import/export, réglages avancés
-test/              Tests unitaires de la logique pure (node --test)
-icons/             Icônes 16 / 48 / 128 px
+manifest.json      Extension manifest (permissions, action, commands, options)
+background.js      Service worker: context menu + shortcuts + dynamic content scripts
+template-engine.js Pure logic: template engine + transforms + Markdown→HTML (testable)
+extract-core.js    Pure Jira DOM parsing logic (key, title, fields) — no globals (testable)
+i18n.js            fr/en translations + t()
+extract-fn.js      Bridge to extract-core + REST API + copy + toast (injected into the page)
+page-buttons.js    Page button + side panel inside detected Jira pages
+settings.js        Shared settings + storage access (popup / options / worker)
+popup.html/.js     Popup on icon click (formats, history, multi)
+options.html/.js   Options page: formats, instances, import/export, advanced settings
+test/              Unit tests for the pure logic (node --test)
+icons/             16 / 48 / 128 px icons
 ```
 
-## Développement
+## Development
 
-La logique pure (moteur de gabarits, i18n, parsing du DOM d'extraction) est
-couverte par des tests. Le parsing d'extraction est testé avec un DOM simulé
-(jsdom) alimenté par des fixtures HTML (`test/fixtures/`) ; installez d'abord
-les dépendances de dev :
+The pure logic (template engine, i18n, extraction DOM parsing) is covered by
+tests. Extraction parsing is tested with a simulated DOM (jsdom) fed by HTML
+fixtures (`test/fixtures/`); install the dev dependencies first:
 
 ```
-npm install     # jsdom (dépendance de dev pour les tests d'extraction)
-npm test        # ou : node --test
+npm install     # jsdom (dev dependency for the extraction tests)
+npm test        # or: node --test
 ```
 
 ## Permissions
 
-- `activeTab` + `scripting` : lire le ticket sur l'onglet actif au moment où vous
-  déclenchez une action popup / raccourci / menu contextuel (fonctionne sur
-  n'importe quelle instance Jira).
-- Script de contenu sur `*.atlassian.net` : afficher automatiquement le bouton et
-  le panneau de copie sur Jira Cloud.
-- `optional_host_permissions` : demandées à la volée pour les instances Jira
-  supplémentaires que vous ajoutez dans les options (self-hosted / domaines
-  personnalisés), où le content script est alors enregistré dynamiquement.
-- `contextMenus` : entrée de menu au clic droit.
-- `storage` : mémoriser vos formats personnalisés (synchronisés via le compte) et
-  l'historique / le dernier format utilisé (stockage local).
+- `activeTab` + `scripting`: read the ticket on the active tab at the moment you
+  trigger a popup / shortcut / context-menu action (works on any Jira instance).
+- Content script on `*.atlassian.net`: automatically show the button and copy
+  panel on Jira Cloud.
+- `optional_host_permissions`: requested on the fly for the extra Jira instances
+  you add in the options (self-hosted / custom domains), where the content script
+  is then registered dynamically.
+- `contextMenus`: right-click menu entry.
+- `storage`: remember your custom formats (synced through your account) and the
+  history / last used format (local storage).
 
-## Licence
+## License
 
-Ce projet est distribué sous licence [MIT](LICENSE).
+This project is distributed under the [MIT](LICENSE) license.

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Jira Ticket Copier",
   "version": "1.7.0",
-  "description": "Récupère le numéro et le titre d'un ticket Jira et les copie dans le presse-papier (formats personnalisables, popup et page Jira). Auto-assignation rapide à des personnes choisies.",
+  "description": "Grabs the key and title of a Jira ticket and copies them to the clipboard (customizable formats, popup and Jira page). Quick auto-assign to chosen people.",
   "permissions": ["activeTab", "scripting", "contextMenus", "storage"],
   "optional_host_permissions": ["*://*/*"],
   "background": {
@@ -20,7 +20,7 @@
     }
   ],
   "action": {
-    "default_title": "Copier le ticket Jira",
+    "default_title": "Copy Jira ticket",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -39,20 +39,20 @@
         "default": "Ctrl+Shift+Y",
         "mac": "Command+Shift+Y"
       },
-      "description": "Ouvrir / fermer le panneau des copies Jira"
+      "description": "Open / close the Jira copy panel"
     },
     "copy-ticket-full": {
       "suggested_key": {
         "default": "Ctrl+Shift+U",
         "mac": "Command+Shift+U"
       },
-      "description": "Copier « Numéro + titre » du ticket Jira"
+      "description": "Copy \"Key + title\" of the Jira ticket"
     },
     "copy-ticket-branch": {
-      "description": "Copier le nom de branche git du ticket Jira"
+      "description": "Copy the git branch name of the Jira ticket"
     },
     "copy-ticket-markdown": {
-      "description": "Copier le lien Markdown du ticket Jira"
+      "description": "Copy the Markdown link of the Jira ticket"
     }
   }
 }
