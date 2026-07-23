@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!--
+  Fixture : vue « board » (tableau) avec plusieurs cartes de tickets.
+  Chaque carte porte data-testid *platform-board-kit.ui.card* et contient la
+  clé + le titre. Une clé apparaît deux fois (colonnes différentes) pour
+  vérifier la déduplication.
+  URL de test attendue :
+  https://acme.atlassian.net/jira/software/projects/DEMO/boards/1
+-->
+<html lang="fr">
+  <head>
+    <title>Tableau DEMO - Jira</title>
+  </head>
+  <body>
+    <div data-testid="platform-board-kit.ui.column">
+      <div data-testid="platform-board-kit.ui.card.card">
+        DEMO-1 Mettre en place l'authentification
+      </div>
+      <div data-testid="platform-board-kit.ui.card.card">
+        DEMO-2 [FRONT] Refondre la page d'accueil
+      </div>
+    </div>
+    <div data-testid="platform-board-kit.ui.column">
+      <div data-testid="platform-board-kit.ui.card.card">
+        DEMO-3 Corriger le tri des colonnes
+      </div>
+      <!-- Doublon volontaire : même ticket dans une autre colonne -->
+      <div data-testid="platform-board-kit.ui.card.card">
+        DEMO-1 Mettre en place l'authentification
+      </div>
+    </div>
+  </body>
+</html>

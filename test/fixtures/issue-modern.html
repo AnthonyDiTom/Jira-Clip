@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--
+  Fixture : vue « issue » Jira Cloud récente (2024+).
+  Sélecteurs data-testid principaux, type et priorité affichés en icône (alt),
+  assigné imbriqué (nom visible + copie masquée a11y → on garde la « feuille »).
+  URL de test attendue : https://acme.atlassian.net/browse/DEMO-1234
+-->
+<html lang="fr">
+  <head>
+    <title>[DEMO-1234] Corriger l'échec de connexion - Jira</title>
+  </head>
+  <body>
+    <nav data-testid="issue.views.issue-base.foundation.breadcrumbs.breadcrumb-current-issue-container">
+      <a href="/browse/DEMO-1234">DEMO-1234</a>
+    </nav>
+
+    <h1 data-testid="issue.views.issue-base.foundation.summary.heading">
+      Corriger l'échec de connexion
+    </h1>
+
+    <div data-testid="issue.views.issue-base.foundation.change-issue-type.button">
+      <img src="/types/bug.svg" alt="Bug" />
+    </div>
+
+    <div data-testid="issue.views.issue-base.foundation.status.status-field-wrapper">
+      <button type="button"><span>In Progress</span></button>
+    </div>
+
+    <div data-testid="issue.views.field.user.assignee">
+      <span>
+        <span>Alex Demo</span>
+      </span>
+    </div>
+
+    <div data-testid="issue.views.field.priority.priority-readview-full.priority-field">
+      <img src="/priority/high.svg" alt="High" />
+    </div>
+  </body>
+</html>

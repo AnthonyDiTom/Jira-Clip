@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title data-i18n="optTitle">Options — Jira Ticket Copier</title>
+    <style>
+      :root {
+        --blue: #1868db;
+        --blue-dark: #1558bc;
+        --bg: #ffffff;
+        --card: #f7f8f9;
+        --fg: #172b4d;
+        --muted: #626f86;
+        --border: #dfe1e6;
+        --btn-bg: #f7f8f9;
+        --btn-bg-hover: #ebecf0;
+        --ok: #216e4e;
+        --err: #c9372c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --blue: #4688ec;
+          --blue-dark: #669df1;
+          --bg: #1d2125;
+          --card: #22272b;
+          --fg: #c7d1db;
+          --muted: #96a0ab;
+          --border: #38414a;
+          --btn-bg: #282e33;
+          --btn-bg-hover: #2c333a;
+          --ok: #7ee2b8;
+          --err: #fd9891;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0 auto;
+        max-width: 760px;
+        padding: 28px 24px 60px;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--fg);
+        background: var(--bg);
+      }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      /* Deux grandes sections distinctes : « Personnalisation des formats » et
+         « Options ». Un titre marqué + un filet évitent de les confondre. */
+      .group { margin-top: 44px; }
+      .group-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0 0 6px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--border);
+      }
+      h2 { font-size: 15px; margin: 28px 0 10px; }
+      h3 { font-size: 14px; margin: 22px 0 8px; }
+      p.sub { color: var(--muted); margin: 0 0 8px; }
+      code {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 12px;
+      }
+      .vars { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+      .vars code { cursor: pointer; user-select: none; }
+      .vars code:hover { border-color: var(--blue); color: var(--blue); }
+      .vars code:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+      .format {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .format .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .format label { font-size: 12px; color: var(--muted); width: 70px; flex: none; }
+      input[type="text"], textarea {
+        width: 100%;
+        background: var(--bg);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 7px 9px;
+        font: inherit;
+      }
+      textarea { resize: vertical; min-height: 38px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+      .preview {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--bg);
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        padding: 6px 9px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin-top: 6px;
+      }
+      /* Légende au-dessus de chaque aperçu (texte brut / rendu HTML). */
+      .preview-label {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--muted);
+        margin: 8px 0 2px;
+      }
+      /* Aperçu « rendu » : le HTML réellement collé dans un éditeur riche
+         (Slack, Confluence…) pour les formats Markdown. */
+      .preview-rendered {
+        font-size: 13px;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 10px;
+        word-break: break-word;
+      }
+      .preview-rendered[hidden] { display: none; }
+      .preview-rendered :is(h1, h2, h3, h4, h5, h6) { font-size: 13px; margin: 6px 0 3px; }
+      .preview-rendered p { margin: 3px 0; }
+      .preview-rendered ul { margin: 3px 0; padding-left: 20px; }
+      .preview-rendered li { margin: 1px 0; }
+      .preview-rendered a { color: var(--blue); }
+      .preview-rendered code {
+        font-size: 11.5px;
+        background: var(--card);
+        border: 1px solid var(--border);
+      }
+      .preview-rendered > :first-child { margin-top: 0; }
+      .preview-rendered > :last-child { margin-bottom: 0; }
+      button {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--btn-bg);
+        color: var(--fg);
+        border-radius: 6px;
+        padding: 7px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover { background: var(--btn-bg-hover); }
+      button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+      button.primary:hover { background: var(--blue-dark); }
+      button.icon { padding: 4px 8px; font-size: 13px; }
+      button.danger { color: var(--err); }
+      .format .actions { display: flex; gap: 6px; justify-content: flex-end; }
+      .toolbar { display: flex; gap: 8px; align-items: center; margin: 14px 0 0; }
+      #saved { color: var(--ok); font-size: 13px; min-height: 18px; }
+      .adv-field { margin-top: 10px; }
+      .adv-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+      .adv-field textarea { min-height: 90px; }
+      .err-msg { color: var(--err); font-size: 12px; min-height: 16px; }
+      .origin-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+      }
+      .origin-item code { border: none; background: transparent; padding: 0; }
+      .avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #8fb8f6;
+        color: #fff;
+        font-weight: 700;
+        line-height: 1;
+        text-transform: uppercase;
+        user-select: none;
+      }
+      .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .assignee-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+      }
+      .assignee-item .name { flex: 1 1 auto; }
+      #assigneeResults {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 4px;
+        max-height: 240px;
+        overflow: auto;
+      }
+      .assignee-result {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: 1px solid transparent;
+      }
+      .assignee-result:hover { background: var(--card); border-color: var(--border); }
+      .assignee-result:disabled { opacity: .5; cursor: default; }
+      .assignee-result .name { flex: 1 1 auto; }
+      /* Éditeur clé→valeur (préfixes de branche / types de commit) */
+      .kv-editor { display: flex; flex-direction: column; gap: 6px; }
+      .kv-head { display: flex; gap: 8px; font-size: 11px; color: var(--muted); padding: 0 2px; }
+      .kv-head .kv-c1 { flex: 1 1 40%; }
+      .kv-head .kv-c2 { flex: 1 1 60%; }
+      .kv-row { display: flex; gap: 8px; align-items: center; }
+      .kv-row input { flex: 1 1 auto; }
+      .kv-row input.kv-key { flex: 1 1 40%; }
+      .kv-row input.kv-val { flex: 1 1 60%; }
+      .kv-row input.is-default { font-weight: 600; }
+      .kv-row .kv-rm {
+        flex: 0 0 auto;
+        border: 1px solid var(--border);
+        background: var(--btn-bg);
+        color: var(--muted);
+        border-radius: 6px;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+      .kv-row .kv-rm:hover { color: var(--err); }
+      .kv-row .kv-rm:disabled { opacity: .3; cursor: not-allowed; }
+      .kv-add { align-self: flex-start; margin-top: 2px; font-size: 13px; }
+      /* Barre de sauvegarde persistante */
+      .savebar[hidden] { display: none; }
+      .savebar {
+        position: sticky;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin: 20px -24px -60px;
+        padding: 12px 24px;
+        background: var(--bg);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -2px 8px rgba(9, 30, 66, .06);
+      }
+      .unsaved { flex: 1 1 auto; color: var(--err); font-size: 13px; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1 data-i18n="optHeading">Jira Ticket Copier — Options</h1>
+
+    <!-- ===== Section 1 : personnalisation des formats de copie ===== -->
+    <section class="group">
+      <h2 class="group-title" data-i18n="optSectionFormats">Personnalisation des formats</h2>
+      <p class="sub" data-i18n="optIntro">
+        Personnalise les formats de copie. Chaque format est un gabarit texte où
+        les variables ci-dessous sont remplacées par les données du ticket.
+      </p>
+
+      <div class="vars" id="varList"></div>
+      <p class="sub" style="font-size: 12px" data-i18n-html="optVarsHint">
+        Cliquez sur une variable pour l'insérer dans le gabarit sélectionné.
+      </p>
+
+      <div id="formats"></div>
+
+      <div class="toolbar">
+        <button type="button" id="add" data-i18n="optAddFormat">+ Ajouter un format</button>
+      </div>
+
+      <h3 data-i18n="optMultiTitle">Copie multi-tickets</h3>
+      <p class="sub" style="font-size: 12px" data-i18n="optMultiSub">
+        Gabarit appliqué à chaque ligne dans les vues board / backlog.
+      </p>
+      <textarea id="multiTemplate" rows="2"></textarea>
+    </section>
+
+    <!-- ===== Section 2 : réglages de l'extension ===== -->
+    <section class="group">
+      <h2 class="group-title" data-i18n="optSectionOptions">Options</h2>
+
+      <h3 data-i18n="optAssignTitle">Auto-assignation</h3>
+      <p class="sub" style="font-size: 12px" data-i18n-html="optAssignSub">
+        Choisissez jusqu'à <strong>5 personnes</strong>.
+      </p>
+      <div id="assigneeList"></div>
+      <div class="toolbar">
+        <input
+          type="text"
+          id="assigneeSearch"
+          placeholder="Rechercher une personne (nom ou e-mail)…"
+          data-i18n-ph="optAssignSearchPh"
+          style="flex: 1 1 auto"
+          autocomplete="off"
+        />
+      </div>
+      <div id="assigneeResults"></div>
+      <div id="assigneeNote" class="err-msg"></div>
+
+      <h3 data-i18n="optInstancesTitle">Instances Jira supplémentaires</h3>
+      <p class="sub" style="font-size: 12px" data-i18n-html="optInstancesSub">
+        Le bouton dans la page s'affiche automatiquement sur <code>*.atlassian.net</code>.
+      </p>
+      <div class="toolbar">
+        <input type="text" id="originInput" placeholder="https://jira.mon-entreprise.com" data-i18n-ph="optOriginPh" style="flex: 1 1 auto" />
+        <button type="button" id="originAdd" data-i18n="optOriginAdd">Ajouter</button>
+      </div>
+      <div id="originErr" class="err-msg"></div>
+      <ul id="originList" style="list-style: none; padding: 0; margin: 8px 0 0"></ul>
+
+      <h3 data-i18n="optAdvSummary">Réglages avancés</h3>
+      <p class="sub" style="font-size: 12px; margin-top: 8px" data-i18n-html="optAdvSub">
+        Associez une sous-chaîne du type d'issue à une valeur.
+      </p>
+      <div class="adv-field">
+        <label data-i18n-html="optBranchLabel">Préfixes de branche → <code>{branchPrefix}</code> / <code>{branch}</code></label>
+        <div id="branchPrefixes" class="kv-editor"></div>
+      </div>
+      <div class="adv-field">
+        <label data-i18n-html="optCommitLabel">Types de commit → <code>{commitType}</code></label>
+        <div id="commitTypes" class="kv-editor"></div>
+      </div>
+      <div class="adv-field">
+        <label for="titleCleanups" data-i18n-html="optCleanupLabel">
+          Nettoyage du titre — motifs retirés (<code>{title}</code>,
+          <code>{slug}</code>, <code>{branch}</code>…)
+        </label>
+        <label
+          style="display: flex; align-items: center; gap: 8px; width: auto; margin: 2px 0 8px; color: var(--fg)"
+        >
+          <input type="checkbox" id="stripTags" style="width: auto" />
+          <span data-i18n-html="optStripTags">Ignorer les tags entre crochets (<code>[FRONT]</code>, <code>[BE]</code>…)</span>
+        </label>
+        <p class="sub" style="font-size: 12px; margin: 0 0 6px" data-i18n-html="optCleanupSub">
+          Motifs supplémentaires (expression régulière), un par ligne.
+        </p>
+        <textarea id="titleCleanups" spellcheck="false" placeholder="^\s*wip:?\s*&#10;\(\d+\)"></textarea>
+        <div class="err-msg" id="titleCleanupsErr" role="status" aria-live="polite"></div>
+      </div>
+      <div class="adv-field">
+        <label for="historyLimit" data-i18n="optHistoryLabel">Nombre de tickets gardés dans l'historique</label>
+        <input type="text" id="historyLimit" style="width: 80px" />
+      </div>
+      <div class="adv-field">
+        <label for="language" data-i18n="optLangLabel">Langue de la popup et du panneau</label>
+        <select id="language" style="width: 220px">
+          <option value="auto" data-i18n="optLangAuto">Automatique (navigateur)</option>
+          <option value="fr" data-i18n="optLangFr">Français</option>
+          <option value="en" data-i18n="optLangEn">English</option>
+        </select>
+      </div>
+
+      <h3 data-i18n="optBackupTitle">Sauvegarde et réinitialisation</h3>
+      <p class="sub" style="font-size: 12px" data-i18n="optBackupSub">
+        Exportez ou importez l'ensemble de vos réglages (formats compris), ou revenez aux valeurs par défaut.
+      </p>
+      <div class="toolbar">
+        <button type="button" id="export" data-i18n="optExport">⭳ Exporter (JSON)</button>
+        <button type="button" id="import" data-i18n="optImport">⭱ Importer (JSON)</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden />
+        <button type="button" id="reset" class="danger" data-i18n="optReset">Réinitialiser les défauts</button>
+        <span id="saved" class="save-status" role="status" aria-live="polite"></span>
+      </div>
+      <div class="err-msg" id="advErr"></div>
+    </section>
+
+    <!-- Barre de sauvegarde persistante : apparaît dès qu'une modification est
+         en attente (formats, multi, réglages avancés). Une seule sauvegarde. -->
+    <div id="saveBar" class="savebar" hidden>
+      <span id="unsaved" class="unsaved"></span>
+      <button type="button" class="primary" id="saveSticky" data-i18n="optSave">Enregistrer</button>
+    </div>
+
+    <script src="template-engine.js"></script>
+    <script src="extract-core.js"></script>
+    <script src="i18n.js"></script>
+    <script src="extract-fn.js"></script>
+    <script src="settings.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

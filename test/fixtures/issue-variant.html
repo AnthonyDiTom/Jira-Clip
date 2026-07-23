@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+  Fixture : variante de vue « issue » (sélecteurs alternatifs).
+  - Pas de summary.heading : le titre est lu via <h1> générique.
+  - Clé absente de l'URL : détectée via le paramètre ?selectedIssue.
+  - Type et priorité affichés en *texte* (pas d'icône).
+  - Libellés « Assignee »/« Priority » (heading) présents : ils doivent être
+    ignorés au profit de la valeur.
+  URL de test attendue :
+  https://acme.atlassian.net/jira/software/projects/DEMO/boards/1?selectedIssue=DEMO-42
+-->
+<html lang="en">
+  <head>
+    <title>DEMO-42 Ajouter le bouton d'export | Jira</title>
+  </head>
+  <body>
+    <h1>Ajouter le bouton d'export</h1>
+
+    <div data-testid="issue.views.issue-base.foundation.change-issue-type-field">
+      <span>Story</span>
+    </div>
+
+    <div data-testid="issue.fields.status.common.ui.status-field">
+      <span>Done</span>
+    </div>
+
+    <div data-testid="issue.views.field.user.assignee">
+      <a href="/people/abc"><span>Sam Variant</span></a>
+    </div>
+
+    <div>
+      <span data-testid="issue.views.field.priority.priority-field-heading">Priority</span>
+      <div data-testid="issue.views.field.priority.priority-field-value">
+        <span>Low</span>
+      </div>
+    </div>
+  </body>
+</html>
